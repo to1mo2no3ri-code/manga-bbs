@@ -92,7 +92,7 @@ export default async function ThreadDetailPage({
                 <span className="font-semibold text-gray-700">
                   {index + 1}. <span className="text-blue-600">{post.user_hash_id}</span>
                 </span>
-                <span>{new Date(post.created_at).toLocaleString('ja-JP')}</span>
+                <span>{new Date(thread.created_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}</span>
               </div>
               <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
                 {post.body}
