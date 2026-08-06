@@ -53,7 +53,7 @@ export default async function HomePage() {
                 {thread.body}
               </p>
               <span className="text-xs text-gray-400">
-                作成日時: {new Date(thread.created_at).toLocaleString('ja-JP')}
+                作成日時: {new Date(thread.created_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
               </span>
             </Link>
           ))
