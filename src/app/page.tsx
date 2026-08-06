@@ -19,7 +19,7 @@ export default async function HomePage() {
   return (
     <main className="max-w-3xl mx-auto p-4 min-h-screen">
       <header className="flex justify-between items-center mb-8 border-b pb-4">
-        <h1 className="text-2xl font-bold text-gray-800">漫画議論掲示板</h1>
+        <h1 className="text-2xl font-bold text-gray-800">マンギロンDB-漫画議論掲示板-</h1>
         <Link
           href="/admin/login"
           className="text-sm text-gray-500 hover:text-gray-800 underline"
