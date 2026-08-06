@@ -18,14 +18,23 @@ export default async function HomePage() {
 
   return (
     <main className="max-w-3xl mx-auto p-4 min-h-screen">
-      <header className="flex justify-between items-center mb-8 border-b pb-4">
-        <h1 className="text-2xl font-bold text-gray-800">マンギロンDB-漫画議論掲示板-</h1>
-        <Link
-          href="/admin/login"
-          className="text-sm text-gray-500 hover:text-gray-800 underline"
-        >
-          運営ログイン
-        </Link>
+      <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-8 border-b pb-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight flex flex-wrap items-baseline gap-x-2">
+            <span>マンギロンDB</span>
+            <span className="text-xs sm:text-sm font-normal text-gray-500">
+              - 漫画議論掲示板 -
+            </span>
+          </h1>
+        </div>
+        <div className="flex justify-end">
+          <Link
+            href="/admin/login"
+            className="text-xs sm:text-sm text-gray-500 hover:text-gray-800 underline whitespace-nowrap"
+          >
+            運営ログイン
+          </Link>
+        </div>
       </header>
 
       <section className="space-y-4">
@@ -37,7 +46,7 @@ export default async function HomePage() {
               href={`/thread/${thread.id}`}
               className="block p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition shadow-sm"
             >
-              <h3 className="text-xl font-bold text-blue-600 mb-2">
+              <h3 className="text-lg sm:text-xl font-bold text-blue-600 mb-2">
                 {thread.title}
               </h3>
               <p className="text-gray-600 line-clamp-2 text-sm mb-2">
