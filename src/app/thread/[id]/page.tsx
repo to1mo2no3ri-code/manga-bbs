@@ -75,7 +75,7 @@ export default async function ThreadDetailPage({
           {thread.body}
         </p>
         <div className="mt-3 text-xs text-gray-500">
-          投稿日時: {new Date(thread.created_at).toLocaleString('ja-JP')}
+          投稿日時: {new Date(thread.created_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
         </div>
       </article>
 
