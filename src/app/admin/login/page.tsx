@@ -23,7 +23,7 @@ export default function AdminLoginPage() {
     if (error) {
       setErrorMsg('ログインに失敗しました。メールアドレスまたはパスワードを確認してください。')
     } else {
-      router.push('/admin/create')
+      router.push('/admin/dashboard')
       router.refresh()
     }
   }
