@@ -2,27 +2,24 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { headers } from 'next/headers' // ← IP取得用に追加
-import crypto from 'crypto' // ← ハッシュ化用に追加
+import { headers } from 'next/headers'
+import crypto from 'crypto'
 import SubmitButton from '@/components/SubmitButton'
+import RealtimePosts from '@/components/RealtimePosts'
 
 export const revalidate = 0
 
 // 日時＋IPアドレスから端末固有の匿名ID（日替わり）を生成する関数
 async function getDailyUserHash() {
   const headerList = await headers()
-  // ユーザーのIPアドレスを取得（Vercel等のプロキシ環境に対応）
   const ip = headerList.get('x-forwarded-for')?.split(',')[0] || headerList.get('x-real-ip') || '127.0.0.1'
-  // 日付文字列 (YYYY-MM-DD)
   const dateStr = new Date().toISOString().slice(0, 10)
 
-  // 「日付 + IPアドレス」を混ぜて SHA-256 で不可逆ハッシュ化
   const hash = crypto
     .createHash('sha256')
     .update(`${dateStr}-${ip}`)
     .digest('hex')
 
-  // 先頭8文字を抽出してIDにする（例: ID:a1b2c3d4）
   return `ID:${hash.slice(0, 8)}`
 }
 
@@ -45,7 +42,7 @@ export default async function ThreadDetailPage({
     notFound()
   }
 
-  // レス（投稿）一覧の取得
+  // 初期レス一覧の取得（初回表示用）
   const { data: posts } = await supabase
     .from('posts')
     .select('*')
@@ -59,8 +56,6 @@ export default async function ThreadDetailPage({
     if (!body || !body.trim()) return
 
     const supabase = await createClient()
-    
-    // IPアドレスと日付に基づいた匿名IDを取得
     const userHashId = await getDailyUserHash()
 
     await supabase.from('posts').insert({
@@ -94,29 +89,10 @@ export default async function ThreadDetailPage({
         </div>
       </article>
 
-      {/* レス一覧 */}
-      <section className="space-y-4 mb-8">
-        <h2 className="text-lg font-bold text-gray-700 border-b pb-2">レス一覧</h2>
-        {posts && posts.length > 0 ? (
-          posts.map((post, index) => (
-            <div
-              key={post.id}
-              className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm"
-            >
-              <div className="flex justify-between items-center text-xs text-gray-500 mb-2 border-b pb-1">
-                <span className="font-semibold text-gray-700">
-                  {index + 1}. <span className="text-blue-600">{post.user_hash_id}</span>
-                </span>
-                <span>{new Date(post.created_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}</span>
-              </div>
-              <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
-                {post.body}
-              </p>
-            </div>
-          ))
-        ) : (
-          <p className="text-gray-500 text-sm">まだレスはありません。最初の書き込みをしてみましょう！</p>
-        )}
+      {/* レス一覧（Realtime自動更新コンポーネント） */}
+      <section className="mb-8">
+        <h2 className="text-lg font-bold text-gray-700 border-b pb-2 mb-4">レス一覧</h2>
+        <RealtimePosts initialPosts={posts || []} threadId={id} />
       </section>
 
       {/* レス投稿フォーム */}

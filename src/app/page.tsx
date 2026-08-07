@@ -30,7 +30,7 @@ export default async function HomePage() {
         <div className="flex justify-end">
           <Link
             href="/admin/login"
-            className="text-xs sm:text-sm text-gray-500 hover:text-gray-800 underline whitespace-nowrap"
+            className="text-[10px] sm:text-xs text-gray-500 hover:text-gray-800 underline whitespace-nowrap"
           >
             運営ログイン
           </Link>
