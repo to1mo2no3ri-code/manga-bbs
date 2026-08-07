@@ -2,16 +2,28 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import SubmitButton from '@/components/SubmitButton' // ← 1. インポートを追加
+import { headers } from 'next/headers' // ← IP取得用に追加
+import crypto from 'crypto' // ← ハッシュ化用に追加
+import SubmitButton from '@/components/SubmitButton'
 
 export const revalidate = 0
 
-// 簡易的な日替わりハッシュ生成関数
-function getDailyUserHash() {
+// 日時＋IPアドレスから端末固有の匿名ID（日替わり）を生成する関数
+async function getDailyUserHash() {
+  const headerList = await headers()
+  // ユーザーのIPアドレスを取得（Vercel等のプロキシ環境に対応）
+  const ip = headerList.get('x-forwarded-for')?.split(',')[0] || headerList.get('x-real-ip') || '127.0.0.1'
+  // 日付文字列 (YYYY-MM-DD)
   const dateStr = new Date().toISOString().slice(0, 10)
-  return 'ID:' + Math.abs(
-    dateStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) * 12345
-  ).toString(36).slice(0, 6)
+
+  // 「日付 + IPアドレス」を混ぜて SHA-256 で不可逆ハッシュ化
+  const hash = crypto
+    .createHash('sha256')
+    .update(`${dateStr}-${ip}`)
+    .digest('hex')
+
+  // 先頭8文字を抽出してIDにする（例: ID:a1b2c3d4）
+  return `ID:${hash.slice(0, 8)}`
 }
 
 export default async function ThreadDetailPage({
@@ -47,7 +59,9 @@ export default async function ThreadDetailPage({
     if (!body || !body.trim()) return
 
     const supabase = await createClient()
-    const userHashId = getDailyUserHash()
+    
+    // IPアドレスと日付に基づいた匿名IDを取得
+    const userHashId = await getDailyUserHash()
 
     await supabase.from('posts').insert({
       thread_id: id,
@@ -116,7 +130,6 @@ export default async function ThreadDetailPage({
             placeholder="感想や意見を書き込む..."
             className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           />
-          {/* 2. <button> を SubmitButton に差し替え */}
           <SubmitButton
             label="書き込む"
             loadingLabel="送信中..."
