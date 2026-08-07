@@ -78,7 +78,7 @@ export default async function ThreadDetailPage({
       {/* 運営の親投稿（スレッド起点） */}
       <article className="p-5 bg-blue-50 border border-blue-200 rounded-lg mb-6 shadow-sm">
         <span className="inline-block px-2 py-0.5 bg-blue-600 text-white text-xs font-bold rounded mb-2">
-          運営のお題
+          スレッドのお題
         </span>
         <h1 className="text-2xl font-bold text-gray-900 mb-3">{thread.title}</h1>
         <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
