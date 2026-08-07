@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import SubmitButton from '@/components/SubmitButton' // ← インポートを追加
 
 export default async function CreateThreadPage() {
   const supabase = await createClient()
@@ -65,12 +66,12 @@ export default async function CreateThreadPage() {
             className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
           />
         </div>
-        <button
-          type="submit"
-          className="px-6 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition"
-        >
-          スレッドを公開する
-        </button>
+
+        {/* <button> から SubmitButton へ置き換え */}
+        <SubmitButton
+          label="スレッドを公開する"
+          loadingLabel="公開処理中..."
+        />
       </form>
     </main>
   )

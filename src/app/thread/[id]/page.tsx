@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import SubmitButton from '@/components/SubmitButton' // ← 1. インポートを追加
 
 export const revalidate = 0
 
@@ -115,12 +116,12 @@ export default async function ThreadDetailPage({
             placeholder="感想や意見を書き込む..."
             className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           />
-          <button
-            type="submit"
+          {/* 2. <button> を SubmitButton に差し替え */}
+          <SubmitButton
+            label="書き込む"
+            loadingLabel="送信中..."
             className="px-5 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition"
-          >
-            書き込む
-          </button>
+          />
         </form>
       </section>
     </main>
