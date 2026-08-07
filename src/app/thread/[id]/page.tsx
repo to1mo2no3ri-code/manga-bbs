@@ -78,12 +78,24 @@ export default async function ThreadDetailPage({
       {/* 運営の親投稿（スレッド起点） */}
       <article className="p-5 bg-blue-50 border border-blue-200 rounded-lg mb-6 shadow-sm">
         <span className="inline-block px-2 py-0.5 bg-blue-600 text-white text-xs font-bold rounded mb-2">
-          スレッドのお題
+          運営のお題
         </span>
         <h1 className="text-2xl font-bold text-gray-900 mb-3">{thread.title}</h1>
-        <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+        <p className="text-gray-800 whitespace-pre-wrap leading-relaxed mb-4">
           {thread.body}
         </p>
+
+        {/* スレッド画像表示エリア（画像が存在する場合のみ描画） */}
+        {thread.image_url && (
+          <div className="my-4 overflow-hidden rounded-lg border border-blue-100 bg-black/5">
+            <img
+              src={thread.image_url}
+              alt={thread.title}
+              className="w-full max-h-[500px] object-contain mx-auto"
+            />
+          </div>
+        )}
+
         <div className="mt-3 text-xs text-gray-500">
           投稿日時: {new Date(thread.created_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
         </div>
