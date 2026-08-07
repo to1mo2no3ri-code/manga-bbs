@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 export default async function CreateThreadPage() {
@@ -32,6 +33,16 @@ export default async function CreateThreadPage() {
 
   return (
     <main className="max-w-2xl mx-auto p-4 min-h-screen">
+      {/* 運営ダッシュボードに戻るボタン */}
+      <div className="mb-4">
+        <Link
+          href="/admin/dashboard"
+          className="text-sm text-blue-500 hover:underline"
+        >
+          ← 運営ダッシュボードに戻る
+        </Link>
+      </div>
+
       <h1 className="text-2xl font-bold mb-6 text-gray-800">新規スレッド作成（運営専用）</h1>
       <form action={createThread} className="space-y-4 bg-white p-6 border rounded-lg shadow-sm">
         <div>
