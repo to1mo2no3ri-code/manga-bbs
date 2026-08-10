@@ -63,7 +63,7 @@ export default async function ThreadDetailPage({
   }
 
   return (
-    <main className="w-full lg:w-3/5 mx-auto p-3 min-h-screen">
+    <main className="w-full lg:w-1/2 mx-auto p-3 min-h-screen">
       <div className="mb-2">
         <Link href="/" className="text-sm text-blue-500 hover:underline">
           ← スレッド一覧に戻る
