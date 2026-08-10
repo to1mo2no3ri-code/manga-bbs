@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import SubmitButton from '@/components/SubmitButton'
+import { MANGA_MAGAZINES } from '@/lib/magazines'
 
 export default async function CreateThreadPage() {
   const supabase = await createClient()
@@ -17,10 +18,11 @@ export default async function CreateThreadPage() {
     'use server'
     const title = formData.get('title') as string
     const body = formData.get('body') as string
+    const category = formData.get('category') as string
     const imageFile = formData.get('image') as File | null
 
-    // バリデーション: タイトル・本文・画像ファイルが揃っているか確認
-    if (!title || !body || !imageFile || imageFile.size === 0) {
+    // バリデーション: タイトル・本文・カテゴリ・画像ファイルが揃っているか確認
+    if (!title || !body || !category || !imageFile || imageFile.size === 0) {
       return
     }
 
@@ -52,6 +54,7 @@ export default async function CreateThreadPage() {
       .insert({
         title: title.trim(),
         body: body.trim(),
+        category, // ← 掲載雑誌カテゴリ
         image_url: publicUrl, // ← 画像URLを保存
       })
       .select()
@@ -85,6 +88,25 @@ export default async function CreateThreadPage() {
             placeholder="例: 『ONE PIECE』最新話の考察・感想スレ"
             className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">掲載雑誌カテゴリ</label>
+          <select
+            name="category"
+            required
+            defaultValue=""
+            className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+          >
+            <option value="" disabled>
+              選択してください
+            </option>
+            {MANGA_MAGAZINES.map((magazine) => (
+              <option key={magazine} value={magazine}>
+                {magazine}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>

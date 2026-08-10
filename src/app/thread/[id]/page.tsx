@@ -75,6 +75,11 @@ export default async function ThreadDetailPage({
         <span className="inline-block px-2 py-0.5 bg-blue-600 text-white text-xs font-bold rounded mb-2">
           スレッドのお題
         </span>
+        {thread.category && (
+          <span className="inline-block ml-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-bold rounded mb-2">
+            {thread.category}
+          </span>
+        )}
         <h1 className="text-xl font-bold text-gray-900 mb-2">{thread.title}</h1>
         <p className="text-gray-800 whitespace-pre-wrap break-words leading-snug mb-2">
           {thread.body}

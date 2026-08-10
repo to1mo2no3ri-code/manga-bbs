@@ -1,20 +1,42 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import HomeThreadBrowser, { type ThreadWithStats } from '@/components/HomeThreadBrowser'
 
 export const revalidate = 0 // 常に最新データを取得
 
 export default async function HomePage() {
   const supabase = await createClient()
 
-  // スレッド一覧を取得
-  const { data: threads, error } = await supabase
-    .from('threads')
-    .select('*')
-    .order('created_at', { ascending: false })
+  // スレッド一覧とレス（集計用）を並行取得
+  const [{ data: threads, error }, { data: posts }] = await Promise.all([
+    supabase.from('threads').select('*').order('created_at', { ascending: false }),
+    supabase.from('posts').select('thread_id, created_at'),
+  ])
 
   if (error) {
     console.error('Error fetching threads:', error)
   }
+
+  // スレッドごとのレス数・最新レス日時を集計
+  const statsByThreadId = new Map<string, { replyCount: number; lastReplyAt: string | null }>()
+  for (const post of posts ?? []) {
+    const stats = statsByThreadId.get(post.thread_id) ?? { replyCount: 0, lastReplyAt: null }
+    stats.replyCount += 1
+    if (!stats.lastReplyAt || post.created_at > stats.lastReplyAt) {
+      stats.lastReplyAt = post.created_at
+    }
+    statsByThreadId.set(post.thread_id, stats)
+  }
+
+  const threadsWithStats: ThreadWithStats[] = (threads ?? []).map((thread) => ({
+    id: thread.id,
+    title: thread.title,
+    body: thread.body,
+    category: thread.category ?? null,
+    created_at: thread.created_at,
+    replyCount: statsByThreadId.get(thread.id)?.replyCount ?? 0,
+    lastReplyAt: statsByThreadId.get(thread.id)?.lastReplyAt ?? null,
+  }))
 
   return (
     <main className="w-full lg:w-1/2 mx-auto p-3 min-h-screen">
@@ -37,31 +59,7 @@ export default async function HomePage() {
         </div>
       </header>
 
-      <section className="divide-y divide-gray-200">
-        {threads && threads.length > 0 ? (
-          threads.map((thread) => (
-            <Link
-              key={thread.id}
-              href={`/thread/${thread.id}`}
-              className="block py-2 hover:bg-gray-50 transition"
-            >
-              <div className="flex justify-between items-baseline gap-2">
-                <h3 className="text-sm sm:text-base font-bold text-blue-600 truncate">
-                  {thread.title}
-                </h3>
-                <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap shrink-0">
-                  {new Date(thread.created_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
-                </span>
-              </div>
-              <p className="text-gray-500 text-xs truncate">
-                {thread.body}
-              </p>
-            </Link>
-          ))
-        ) : (
-          <p className="text-gray-500 py-2">現在スレッドはありません。</p>
-        )}
-      </section>
+      <HomeThreadBrowser threads={threadsWithStats} />
     </main>
   )
 }
