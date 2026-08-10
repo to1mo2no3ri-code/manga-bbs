@@ -94,7 +94,7 @@ export default function RealtimePosts({ initialPosts, threadId, submitPost }: Re
               </a>
             )}
 
-            <p className="text-gray-800 whitespace-pre-wrap leading-snug mt-0.5">
+            <p className="text-gray-800 whitespace-pre-wrap break-words leading-snug mt-0.5">
               {post.body}
             </p>
 

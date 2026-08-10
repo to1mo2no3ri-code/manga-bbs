@@ -63,7 +63,7 @@ export default async function ThreadDetailPage({
   }
 
   return (
-    <main className="max-w-3xl mx-auto p-3 min-h-screen">
+    <main className="w-full lg:w-3/5 mx-auto p-3 min-h-screen">
       <div className="mb-2">
         <Link href="/" className="text-sm text-blue-500 hover:underline">
           ← スレッド一覧に戻る
@@ -76,7 +76,7 @@ export default async function ThreadDetailPage({
           スレッドのお題
         </span>
         <h1 className="text-xl font-bold text-gray-900 mb-2">{thread.title}</h1>
-        <p className="text-gray-800 whitespace-pre-wrap leading-snug mb-2">
+        <p className="text-gray-800 whitespace-pre-wrap break-words leading-snug mb-2">
           {thread.body}
         </p>
 

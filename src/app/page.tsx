@@ -17,7 +17,7 @@ export default async function HomePage() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto p-3 min-h-screen">
+    <main className="w-full lg:w-3/5 mx-auto p-3 min-h-screen">
       <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 mb-3 border-b pb-2">
         <div>
           <h1 className="text-lg sm:text-xl font-bold text-gray-800 tracking-tight flex flex-wrap items-baseline gap-x-2">

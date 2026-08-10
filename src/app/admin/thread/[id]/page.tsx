@@ -76,7 +76,7 @@ export default async function AdminThreadManagePage({
                 <div className="text-xs text-gray-500 mb-1">
                   #{index + 1} | ID: <span className="font-semibold text-blue-600">{post.user_hash_id}</span> | {new Date(post.created_at).toLocaleString('ja-JP')}
                 </div>
-                <p className="text-gray-800 whitespace-pre-wrap text-sm">{post.body}</p>
+                <p className="text-gray-800 whitespace-pre-wrap break-words text-sm">{post.body}</p>
               </div>
               <form action={deletePost}>
                 <input type="hidden" name="post_id" value={post.id} />
