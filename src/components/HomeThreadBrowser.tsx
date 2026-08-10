@@ -18,24 +18,43 @@ interface HomeThreadBrowserProps {
   threads: ThreadWithStats[]
 }
 
-type RankingTab = 'new' | 'popular' | 'recentReply'
+type Tab = 'new' | 'popular' | 'recentReply' | 'search'
 
-const RANKING_TABS: { key: RankingTab; label: string }[] = [
+const TABS: { key: Tab; label: string }[] = [
   { key: 'new', label: '新着スレ' },
   { key: 'popular', label: '人気（レス数）' },
   { key: 'recentReply', label: '最新レス' },
+  { key: 'search', label: '検索' },
 ]
+
+const PAGE_SIZE = 5
+const LOAD_MORE_STEP = 10
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
 }
 
 export default function HomeThreadBrowser({ threads }: HomeThreadBrowserProps) {
-  const [activeTab, setActiveTab] = useState<RankingTab>('new')
+  const [activeTab, setActiveTab] = useState<Tab>('new')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
-  // ランキング用トップ5（カテゴリ選択とは独立して全スレッドから集計）
-  const rankedTop5 = useMemo(() => {
+  function selectTab(tab: Tab) {
+    setActiveTab(tab)
+    setVisibleCount(PAGE_SIZE)
+  }
+
+  // タブごとの並び替え結果。検索タブではタイトル・本文にキーワードを含むスレッドを抽出
+  const tabResults = useMemo(() => {
+    if (activeTab === 'search') {
+      const q = searchQuery.trim().toLowerCase()
+      if (!q) return []
+      return threads
+        .filter((t) => t.title.toLowerCase().includes(q) || t.body.toLowerCase().includes(q))
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    }
+
     const sorted = [...threads]
     if (activeTab === 'new') {
       sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -48,8 +67,11 @@ export default function HomeThreadBrowser({ threads }: HomeThreadBrowserProps) {
         return bTime - aTime
       })
     }
-    return sorted.slice(0, 5)
-  }, [threads, activeTab])
+    return sorted
+  }, [threads, activeTab, searchQuery])
+
+  const visibleResults = tabResults.slice(0, visibleCount)
+  const hasMore = tabResults.length > visibleCount
 
   // カテゴリ選択に応じたスレッド一覧（未選択時は全件を新着順で表示）
   const filteredThreads = useMemo(() => {
@@ -63,15 +85,17 @@ export default function HomeThreadBrowser({ threads }: HomeThreadBrowserProps) {
 
   return (
     <>
-      {/* ランキング（タブ切り替え） */}
+      {/* ランキング・検索（タブ切り替え） */}
       <section className="mb-4">
         <div className="flex gap-1 border-b border-gray-200 mb-2">
-          {RANKING_TABS.map((tab) => (
+          {TABS.map((tab) => (
             <button
               key={tab.key}
               type="button"
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => selectTab(tab.key)}
               className={`px-3 py-1.5 text-sm font-semibold border-b-2 transition ${
+                tab.key === 'search' ? 'ml-auto' : ''
+              } ${
                 activeTab === tab.key
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -82,15 +106,33 @@ export default function HomeThreadBrowser({ threads }: HomeThreadBrowserProps) {
           ))}
         </div>
 
-        {rankedTop5.length > 0 ? (
+        {activeTab === 'search' && (
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              setVisibleCount(PAGE_SIZE)
+            }}
+            autoFocus
+            placeholder="タイトル・本文で検索..."
+            className="w-full p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 mb-2"
+          />
+        )}
+
+        {activeTab === 'search' && searchQuery.trim() === '' ? (
+          <p className="text-gray-500 text-sm py-1.5">キーワードを入力してください。</p>
+        ) : visibleResults.length > 0 ? (
           <ol className="divide-y divide-gray-200">
-            {rankedTop5.map((thread, index) => (
+            {visibleResults.map((thread, index) => (
               <li key={thread.id}>
                 <Link
                   href={`/thread/${thread.id}`}
                   className="flex items-baseline gap-2 py-1.5 hover:bg-gray-50 transition"
                 >
-                  <span className="text-xs text-gray-400 shrink-0">{index + 1}</span>
+                  {activeTab !== 'search' && (
+                    <span className="text-xs text-gray-400 shrink-0">{index + 1}</span>
+                  )}
                   <span className="text-sm font-bold text-blue-600 truncate flex-1">
                     {thread.title}
                   </span>
@@ -99,12 +141,29 @@ export default function HomeThreadBrowser({ threads }: HomeThreadBrowserProps) {
                       {thread.replyCount}件
                     </span>
                   )}
+                  {activeTab === 'search' && (
+                    <span className="text-xs text-gray-400 truncate max-w-[40%] shrink-0">
+                      {thread.body}
+                    </span>
+                  )}
                 </Link>
               </li>
             ))}
           </ol>
         ) : (
-          <p className="text-gray-500 text-sm py-1.5">スレッドはありません。</p>
+          <p className="text-gray-500 text-sm py-1.5">
+            {activeTab === 'search' ? '該当するスレッドが見つかりません。' : 'スレッドはありません。'}
+          </p>
+        )}
+
+        {hasMore && (
+          <button
+            type="button"
+            onClick={() => setVisibleCount((c) => c + LOAD_MORE_STEP)}
+            className="mt-1 w-full text-center text-xs text-blue-600 hover:underline py-1"
+          >
+            もっと見る
+          </button>
         )}
       </section>
 
