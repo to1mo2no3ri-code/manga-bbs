@@ -17,12 +17,12 @@ export default async function HomePage() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto p-4 min-h-screen">
-      <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-8 border-b pb-4">
+    <main className="max-w-3xl mx-auto p-3 min-h-screen">
+      <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 mb-3 border-b pb-2">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight flex flex-wrap items-baseline gap-x-2">
+          <h1 className="text-lg sm:text-xl font-bold text-gray-800 tracking-tight flex flex-wrap items-baseline gap-x-2">
             <span>マンギロンDB</span>
-            <span className="text-xs sm:text-sm font-normal text-gray-500">
+            <span className="text-xs font-normal text-gray-500">
               - 漫画議論掲示板 -
             </span>
           </h1>
@@ -37,28 +37,29 @@ export default async function HomePage() {
         </div>
       </header>
 
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-700">スレッド一覧</h2>
+      <section className="divide-y divide-gray-200">
         {threads && threads.length > 0 ? (
           threads.map((thread) => (
             <Link
               key={thread.id}
               href={`/thread/${thread.id}`}
-              className="block p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition shadow-sm"
+              className="block py-2 hover:bg-gray-50 transition"
             >
-              <h3 className="text-lg sm:text-xl font-bold text-blue-600 mb-2">
-                {thread.title}
-              </h3>
-              <p className="text-gray-600 line-clamp-2 text-sm mb-2">
+              <div className="flex justify-between items-baseline gap-2">
+                <h3 className="text-sm sm:text-base font-bold text-blue-600 truncate">
+                  {thread.title}
+                </h3>
+                <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap shrink-0">
+                  {new Date(thread.created_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
+                </span>
+              </div>
+              <p className="text-gray-500 text-xs truncate">
                 {thread.body}
               </p>
-              <span className="text-xs text-gray-400">
-                作成日時: {new Date(thread.created_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
-              </span>
             </Link>
           ))
         ) : (
-          <p className="text-gray-500">現在スレッドはありません。</p>
+          <p className="text-gray-500 py-2">現在スレッドはありません。</p>
         )}
       </section>
     </main>

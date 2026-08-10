@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import SubmitButton from '@/components/SubmitButton'
 
 type Post = {
   id: string
@@ -9,16 +10,20 @@ type Post = {
   body: string
   user_hash_id: string
   created_at: string
+  reply_to: string | null
 }
 
 interface RealtimePostsProps {
   initialPosts: Post[]
   threadId: string
+  submitPost: (formData: FormData) => Promise<void>
 }
 
-export default function RealtimePosts({ initialPosts, threadId }: RealtimePostsProps) {
+export default function RealtimePosts({ initialPosts, threadId, submitPost }: RealtimePostsProps) {
   // 1. 初期データ（サーバーで取得した過去のレス）を React の State に保持
   const [posts, setPosts] = useState<Post[]>(initialPosts)
+  // 現在返信フォームを開いているレスの ID（1件のみ開ける）
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
 
   useEffect(() => {
     // 2. ブラウザ用の Supabase クライアントを作成
@@ -53,29 +58,85 @@ export default function RealtimePosts({ initialPosts, threadId }: RealtimePostsP
     }
   }, [threadId])
 
+  // レスID → 表示番号（何番目のレスか）の対応表。返信元の ">>N" 表示に使う
+  const indexById = useMemo(() => {
+    const map = new Map<string, number>()
+    posts.forEach((post, index) => map.set(post.id, index + 1))
+    return map
+  }, [posts])
+
+  // 返信フォーム送信時：通常の投稿アクションを呼んだ後、フォームを閉じる
+  async function handleReplySubmit(formData: FormData) {
+    await submitPost(formData)
+    setReplyingTo(null)
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="divide-y divide-gray-200">
       {posts && posts.length > 0 ? (
         posts.map((post, index) => (
-          <div
-            key={post.id}
-            className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm"
-          >
-            <div className="flex justify-between items-center text-xs text-gray-500 mb-2 border-b pb-1">
+          <div key={post.id} id={`res-${post.id}`} className="py-2">
+            <div className="flex justify-between items-baseline text-xs text-gray-500">
               <span className="font-semibold text-gray-700">
-                {index + 1}. <span className="text-blue-600">{post.user_hash_id}</span>
+                {index + 1} <span className="text-blue-600">{post.user_hash_id}</span>
               </span>
               <span>
                 {new Date(post.created_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
               </span>
             </div>
-            <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+
+            {post.reply_to && indexById.has(post.reply_to) && (
+              <a
+                href={`#res-${post.reply_to}`}
+                className="text-xs text-blue-500 hover:underline"
+              >
+                &gt;&gt;{indexById.get(post.reply_to)}
+              </a>
+            )}
+
+            <p className="text-gray-800 whitespace-pre-wrap leading-snug mt-0.5">
               {post.body}
             </p>
+
+            <button
+              type="button"
+              onClick={() => setReplyingTo(replyingTo === post.id ? null : post.id)}
+              className="mt-1 text-xs text-gray-400 hover:text-blue-600"
+            >
+              返信
+            </button>
+
+            {replyingTo === post.id && (
+              <form action={handleReplySubmit} className="mt-2 space-y-2">
+                <input type="hidden" name="reply_to" value={post.id} />
+                <textarea
+                  name="body"
+                  rows={3}
+                  required
+                  autoFocus
+                  placeholder={`>>${index + 1} に返信`}
+                  className="w-full p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                />
+                <div className="flex items-center gap-2">
+                  <SubmitButton
+                    label="返信する"
+                    loadingLabel="送信中..."
+                    className="px-3 py-1 text-xs bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setReplyingTo(null)}
+                    className="text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    キャンセル
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         ))
       ) : (
-        <p className="text-gray-500 text-sm">まだレスはありません。最初の書き込みをしてみましょう！</p>
+        <p className="text-gray-500 text-sm py-2">まだレスはありません。最初の書き込みをしてみましょう！</p>
       )}
     </div>
   )
