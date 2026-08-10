@@ -6,6 +6,7 @@ import { headers } from 'next/headers'
 import crypto from 'crypto'
 import SubmitButton from '@/components/SubmitButton'
 import RealtimePosts from '@/components/RealtimePosts'
+import { getLevel } from '@/lib/levels'
 
 export const revalidate = 0
 
@@ -52,16 +53,20 @@ export default async function ThreadDetailPage({
     const supabase = await createClient()
     const userHashId = await getDailyUserHash()
 
-    // ログイン中なら、匿名IDの代わりにユーザーネームを紐付ける
+    // ログイン中なら、匿名IDの代わりにユーザーネーム・レベル・肩書を紐付ける
+    // （投稿時点のレベル・肩書をスナップショットするので、後で変わっても過去のレスは変わらない）
     const { data: { user } } = await supabase.auth.getUser()
     let displayName: string | null = null
+    let level = 1
+    let title: string | null = null
     if (user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('id', user.id)
-        .single()
+      const [{ data: profile }, { count: postCount }] = await Promise.all([
+        supabase.from('profiles').select('username, title').eq('id', user.id).single(),
+        supabase.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+      ])
       displayName = profile?.username ?? null
+      title = profile?.title ?? null
+      level = getLevel((postCount ?? 0) + 1) // 今回の投稿を含めた件数でレベルを算出
     }
 
     await supabase.from('posts').insert({
@@ -71,6 +76,8 @@ export default async function ThreadDetailPage({
       reply_to: replyTo,
       user_id: user?.id ?? null,
       display_name: displayName,
+      level,
+      title,
     })
 
     revalidatePath(`/thread/${id}`)

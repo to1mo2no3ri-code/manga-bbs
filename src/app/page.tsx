@@ -69,12 +69,15 @@ export default async function HomePage() {
               マイページ（{username ?? '名前未設定'}）
             </Link>
           ) : (
-            <Link
-              href="/login"
-              className="text-[10px] sm:text-xs text-gray-500 hover:text-gray-800 underline whitespace-nowrap"
-            >
-              ユーザーログイン／新規登録
-            </Link>
+            <span className="text-[10px] sm:text-xs text-gray-500 whitespace-nowrap">
+              <Link href="/login" className="hover:text-gray-800 underline">
+                ログイン
+              </Link>
+              {' / '}
+              <Link href="/signup" className="hover:text-gray-800 underline">
+                新規登録
+              </Link>
+            </span>
           )}
           <Link
             href="/admin/login"

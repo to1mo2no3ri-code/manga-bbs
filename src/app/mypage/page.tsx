@@ -3,8 +3,10 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getLevel, getNextLevelThreshold } from '@/lib/levels'
+import { getAvailableTitles } from '@/lib/titles'
 import SubmitButton from '@/components/SubmitButton'
 import LogoutButton from '@/components/LogoutButton'
+import TitlePicker from '@/components/TitlePicker'
 
 export const revalidate = 0
 
@@ -17,13 +19,14 @@ export default async function MyPage() {
   }
 
   const [{ data: profile }, { count: postCount }] = await Promise.all([
-    supabase.from('profiles').select('username').eq('id', user.id).single(),
+    supabase.from('profiles').select('username, title').eq('id', user.id).single(),
     supabase.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
   ])
 
   const totalPosts = postCount ?? 0
   const level = getLevel(totalPosts)
   const nextThreshold = getNextLevelThreshold(totalPosts)
+  const availableTitles = getAvailableTitles(level)
 
   // ユーザーネーム更新 Server Action
   async function updateUsername(formData: FormData) {
@@ -36,6 +39,25 @@ export default async function MyPage() {
     if (!user) return
 
     await supabase.from('profiles').update({ username }).eq('id', user.id)
+    revalidatePath('/mypage')
+  }
+
+  // 肩書更新 Server Action（現在のレベルで解放済みの肩書かをサーバー側でも検証する）
+  async function updateTitle(title: string) {
+    'use server'
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { count } = await supabase
+      .from('posts')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+    const currentLevel = getLevel(count ?? 0)
+
+    if (!getAvailableTitles(currentLevel).includes(title)) return
+
+    await supabase.from('profiles').update({ title }).eq('id', user.id)
     revalidatePath('/mypage')
   }
 
@@ -59,7 +81,7 @@ export default async function MyPage() {
         </div>
       </section>
 
-      <section>
+      <section className="mb-6">
         <h2 className="text-sm font-bold text-gray-700 mb-2">ユーザーネーム</h2>
         <p className="text-xs text-gray-500 mb-2">
           設定すると、書き込み時に匿名IDの代わりにこの名前が表示されます。
@@ -79,6 +101,19 @@ export default async function MyPage() {
             className="px-4 py-2 text-sm bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition"
           />
         </form>
+      </section>
+
+      <section>
+        <h2 className="text-sm font-bold text-gray-700 mb-2">肩書</h2>
+        <p className="text-xs text-gray-500 mb-2">
+          書き込み時に名前の横に表示されます。レベルが上がるほど選べる肩書が増えます（現在
+          {availableTitles.length}個から選択可能）。
+        </p>
+        <TitlePicker
+          currentTitle={profile?.title ?? null}
+          availableTitles={availableTitles}
+          updateTitle={updateTitle}
+        />
       </section>
     </main>
   )
