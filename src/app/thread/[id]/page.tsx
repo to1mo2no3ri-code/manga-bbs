@@ -52,11 +52,25 @@ export default async function ThreadDetailPage({
     const supabase = await createClient()
     const userHashId = await getDailyUserHash()
 
+    // ログイン中なら、匿名IDの代わりにユーザーネームを紐付ける
+    const { data: { user } } = await supabase.auth.getUser()
+    let displayName: string | null = null
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user.id)
+        .single()
+      displayName = profile?.username ?? null
+    }
+
     await supabase.from('posts').insert({
       thread_id: id,
       body: body.trim(),
       user_hash_id: userHashId,
       reply_to: replyTo,
+      user_id: user?.id ?? null,
+      display_name: displayName,
     })
 
     revalidatePath(`/thread/${id}`)

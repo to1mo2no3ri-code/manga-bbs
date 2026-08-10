@@ -9,6 +9,7 @@ type Post = {
   thread_id: string
   body: string
   user_hash_id: string
+  display_name: string | null
   created_at: string
   reply_to: string | null
 }
@@ -78,7 +79,7 @@ export default function RealtimePosts({ initialPosts, threadId, submitPost }: Re
           <div key={post.id} id={`res-${post.id}`} className="py-2">
             <div className="flex justify-between items-baseline text-xs text-gray-500">
               <span className="font-semibold text-gray-700">
-                {index + 1} <span className="text-blue-600">{post.user_hash_id}</span>
+                {index + 1} <span className="text-blue-600">{post.display_name ?? post.user_hash_id}</span>
               </span>
               <span>
                 {new Date(post.created_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}

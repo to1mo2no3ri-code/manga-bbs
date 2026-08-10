@@ -1,18 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
+import { isCurrentUserAdmin, requireAdmin } from '@/lib/auth'
 
 export const revalidate = 0
 
 export default async function AdminDashboardPage() {
-  const supabase = await createClient()
-
-  // ログインチェック
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    redirect('/admin/login')
-  }
+  // ログイン・管理者チェック
+  const { supabase } = await requireAdmin()
 
   // 全スレッド取得
   const { data: threads } = await supabase
@@ -27,8 +22,7 @@ export default async function AdminDashboardPage() {
     if (!threadId) return
 
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!(await isCurrentUserAdmin(supabase))) return
 
     // 関連するレスを先に削除（外部キー制約の回避）
     await supabase.from('posts').delete().eq('thread_id', threadId)

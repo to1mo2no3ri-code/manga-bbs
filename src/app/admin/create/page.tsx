@@ -3,15 +3,11 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import SubmitButton from '@/components/SubmitButton'
 import { MANGA_MAGAZINES } from '@/lib/magazines'
+import { isCurrentUserAdmin, requireAdmin } from '@/lib/auth'
 
 export default async function CreateThreadPage() {
-  const supabase = await createClient()
-
-  // ログインチェック（未ログインならログイン画面へ飛ばす）
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    redirect('/admin/login')
-  }
+  // ログイン・管理者チェック（未ログイン/管理者以外はログイン画面へ飛ばす）
+  await requireAdmin()
 
   // スレッド作成処理 (Server Action)
   async function createThread(formData: FormData) {
@@ -27,6 +23,7 @@ export default async function CreateThreadPage() {
     }
 
     const supabase = await createClient()
+    if (!(await isCurrentUserAdmin(supabase))) return
 
     // 1. 画像のファイル名をユニーク（重複しない）に生成
     const fileExt = imageFile.name.split('.').pop()

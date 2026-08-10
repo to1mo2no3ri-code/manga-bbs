@@ -7,11 +7,22 @@ export const revalidate = 0 // 常に最新データを取得
 export default async function HomePage() {
   const supabase = await createClient()
 
-  // スレッド一覧とレス（集計用）を並行取得
-  const [{ data: threads, error }, { data: posts }] = await Promise.all([
+  // スレッド一覧とレス（集計用）、ログイン状態を並行取得
+  const [{ data: threads, error }, { data: posts }, { data: { user } }] = await Promise.all([
     supabase.from('threads').select('*').order('created_at', { ascending: false }),
     supabase.from('posts').select('thread_id, created_at'),
+    supabase.auth.getUser(),
   ])
+
+  let username: string | null = null
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', user.id)
+      .single()
+    username = profile?.username ?? null
+  }
 
   if (error) {
     console.error('Error fetching threads:', error)
@@ -49,7 +60,22 @@ export default async function HomePage() {
             </span>
           </h1>
         </div>
-        <div className="flex justify-end">
+        <div className="flex flex-col items-end gap-0.5">
+          {user ? (
+            <Link
+              href="/mypage"
+              className="text-[10px] sm:text-xs text-gray-500 hover:text-gray-800 underline whitespace-nowrap"
+            >
+              マイページ（{username ?? '名前未設定'}）
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="text-[10px] sm:text-xs text-gray-500 hover:text-gray-800 underline whitespace-nowrap"
+            >
+              ユーザーログイン／新規登録
+            </Link>
+          )}
           <Link
             href="/admin/login"
             className="text-[10px] sm:text-xs text-gray-500 hover:text-gray-800 underline whitespace-nowrap"

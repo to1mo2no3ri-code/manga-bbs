@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
-import { redirect, notFound } from 'next/navigation'
+import { notFound } from 'next/navigation'
+import { isCurrentUserAdmin, requireAdmin } from '@/lib/auth'
 
 export const revalidate = 0
 
@@ -11,13 +12,9 @@ export default async function AdminThreadManagePage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
 
-  // ログインチェック
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    redirect('/admin/login')
-  }
+  // ログイン・管理者チェック
+  const { supabase } = await requireAdmin()
 
   // スレッド情報取得
   const { data: thread } = await supabase
@@ -42,8 +39,7 @@ export default async function AdminThreadManagePage({
     if (!postId) return
 
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!(await isCurrentUserAdmin(supabase))) return
 
     await supabase.from('posts').delete().eq('id', postId)
 
@@ -74,7 +70,7 @@ export default async function AdminThreadManagePage({
             >
               <div className="pr-4">
                 <div className="text-xs text-gray-500 mb-1">
-                  #{index + 1} | ID: <span className="font-semibold text-blue-600">{post.user_hash_id}</span> | {new Date(post.created_at).toLocaleString('ja-JP')}
+                  #{index + 1} | ID: <span className="font-semibold text-blue-600">{post.display_name ?? post.user_hash_id}</span> | {new Date(post.created_at).toLocaleString('ja-JP')}
                 </div>
                 <p className="text-gray-800 whitespace-pre-wrap break-words text-sm">{post.body}</p>
               </div>
