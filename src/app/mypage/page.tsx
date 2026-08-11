@@ -4,13 +4,20 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getLevel, getNextLevelThreshold } from '@/lib/levels'
 import { getAvailableTitles } from '@/lib/titles'
+import { LIFETIME_PLAN_PRICE_JPY } from '@/lib/plans'
+import { createCheckoutSession } from '@/app/actions/stripe'
 import SubmitButton from '@/components/SubmitButton'
 import LogoutButton from '@/components/LogoutButton'
 import TitlePicker from '@/components/TitlePicker'
 
 export const revalidate = 0
 
-export default async function MyPage() {
+export default async function MyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ payment?: string }>
+}) {
+  const { payment } = await searchParams
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -19,7 +26,7 @@ export default async function MyPage() {
   }
 
   const [{ data: profile }, { count: postCount }] = await Promise.all([
-    supabase.from('profiles').select('username, title').eq('id', user.id).single(),
+    supabase.from('profiles').select('username, title, plan').eq('id', user.id).single(),
     supabase.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
   ])
 
@@ -71,6 +78,35 @@ export default async function MyPage() {
       </div>
 
       <h1 className="text-lg font-bold text-gray-800 mb-4">マイページ</h1>
+
+      {payment === 'success' && (
+        <div className="mb-4 text-sm text-green-700 bg-green-50 p-2 rounded border border-green-200">
+          決済が完了しました。有料会員登録ありがとうございます！
+        </div>
+      )}
+      {payment === 'cancelled' && (
+        <div className="mb-4 text-sm text-gray-600 bg-gray-50 p-2 rounded border border-gray-200">
+          決済がキャンセルされました。有料登録はいつでもこちらから行えます。
+        </div>
+      )}
+
+      <section className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+        <div className="text-sm text-gray-500 mb-1">会員種別</div>
+        {profile?.plan === 'paid' ? (
+          <div className="text-lg font-bold text-amber-600">有料会員</div>
+        ) : (
+          <div>
+            <div className="text-lg font-bold text-gray-700 mb-2">無料会員</div>
+            <form action={createCheckoutSession}>
+              <SubmitButton
+                label={`有料会員に登録する（¥${LIFETIME_PLAN_PRICE_JPY} 買い切り）`}
+                loadingLabel="決済ページに移動中..."
+                className="px-4 py-2 text-sm bg-amber-500 text-white font-semibold rounded hover:bg-amber-600 transition"
+              />
+            </form>
+          </div>
+        )}
+      </section>
 
       <section className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
         <div className="text-sm text-gray-500 mb-1">現在のレベル</div>
