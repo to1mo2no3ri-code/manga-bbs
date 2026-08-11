@@ -5,10 +5,16 @@ import { useState } from 'react'
 interface TitlePickerProps {
   currentTitle: string | null
   availableTitles: string[]
+  paidOnlyTitles?: string[]
   updateTitle: (title: string) => Promise<void>
 }
 
-export default function TitlePicker({ currentTitle, availableTitles, updateTitle }: TitlePickerProps) {
+export default function TitlePicker({
+  currentTitle,
+  availableTitles,
+  paidOnlyTitles = [],
+  updateTitle,
+}: TitlePickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, setIsPending] = useState(false)
 
@@ -52,20 +58,34 @@ export default function TitlePicker({ currentTitle, availableTitles, updateTitle
               </button>
             </div>
             <ul className="divide-y divide-gray-100">
-              {availableTitles.map((title) => (
-                <li key={title}>
-                  <button
-                    type="button"
-                    disabled={isPending}
-                    onClick={() => handleSelect(title)}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition disabled:opacity-50 ${
-                      title === currentTitle ? 'text-blue-600 font-semibold' : 'text-gray-700'
-                    }`}
-                  >
-                    {title}
-                  </button>
-                </li>
-              ))}
+              {availableTitles.map((title) => {
+                const isPaidOnly = paidOnlyTitles.includes(title)
+                return (
+                  <li key={title}>
+                    <button
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => handleSelect(title)}
+                      className={`w-full flex items-center justify-between gap-2 text-left px-3 py-2 text-sm transition disabled:opacity-50 ${
+                        isPaidOnly ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-blue-50'
+                      } ${
+                        title === currentTitle
+                          ? 'text-blue-600 font-semibold'
+                          : isPaidOnly
+                            ? 'text-amber-700 font-semibold'
+                            : 'text-gray-700'
+                      }`}
+                    >
+                      <span>{title}</span>
+                      {isPaidOnly && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-white shrink-0">
+                          有料限定
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           </div>
         </div>

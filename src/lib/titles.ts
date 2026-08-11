@@ -56,7 +56,11 @@ export const TITLES: string[] = [
 // レベルごとに選べる肩書の数（レベル1=3個 〜 レベル10=50個 = 全て）
 export const TITLE_UNLOCK_COUNTS = [3, 5, 8, 12, 17, 22, 28, 35, 42, 50] as const
 
-export function getAvailableTitles(level: number): string[] {
+// 有料会員だけが選べる、ひと目で分かる特別な肩書
+export const PAID_ONLY_TITLES: string[] = ['課金覇王', '有料会員の頂点', 'マンギロン最強課金者']
+
+export function getAvailableTitles(level: number, isPaid: boolean): string[] {
   const count = TITLE_UNLOCK_COUNTS[level - 1] ?? TITLES.length
-  return TITLES.slice(0, count)
+  const base = TITLES.slice(0, count)
+  return isPaid ? [...base, ...PAID_ONLY_TITLES] : base
 }

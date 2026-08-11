@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import SubmitButton from '@/components/SubmitButton'
+import { PAID_ONLY_TITLES } from '@/lib/titles'
 
 type Post = {
   id: string
@@ -82,10 +83,18 @@ export default function RealtimePosts({ initialPosts, threadId, submitPost }: Re
             <div className="flex justify-between items-baseline text-xs text-gray-500">
               <span className="font-semibold text-gray-700">
                 {index + 1} <span className="text-blue-600">{post.display_name ?? post.user_hash_id}</span>{' '}
-                <span className="text-[10px] text-gray-400 font-normal">
-                  Lv.{post.level}
-                  {post.title && ` ${post.title}`}
-                </span>
+                <span className="text-[10px] text-gray-400 font-normal">Lv.{post.level}</span>
+                {post.title && (
+                  <span
+                    className={
+                      PAID_ONLY_TITLES.includes(post.title)
+                        ? 'text-[10px] font-bold text-amber-600 ml-1'
+                        : 'text-[10px] text-gray-400 font-normal ml-1'
+                    }
+                  >
+                    {post.title}
+                  </span>
+                )}
               </span>
               <span>
                 {new Date(post.created_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}

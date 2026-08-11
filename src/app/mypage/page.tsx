@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getLevel, getNextLevelThreshold } from '@/lib/levels'
-import { getAvailableTitles } from '@/lib/titles'
+import { getAvailableTitles, PAID_ONLY_TITLES } from '@/lib/titles'
 import { LIFETIME_PLAN_PRICE_JPY } from '@/lib/plans'
 import { createCheckoutSession } from '@/app/actions/stripe'
 import SubmitButton from '@/components/SubmitButton'
@@ -33,7 +33,8 @@ export default async function MyPage({
   const totalPosts = postCount ?? 0
   const level = getLevel(totalPosts)
   const nextThreshold = getNextLevelThreshold(totalPosts)
-  const availableTitles = getAvailableTitles(level)
+  const isPaid = profile?.plan === 'paid'
+  const availableTitles = getAvailableTitles(level, isPaid)
 
   // ユーザーネーム更新 Server Action
   async function updateUsername(formData: FormData) {
@@ -49,20 +50,20 @@ export default async function MyPage({
     revalidatePath('/mypage')
   }
 
-  // 肩書更新 Server Action（現在のレベルで解放済みの肩書かをサーバー側でも検証する）
+  // 肩書更新 Server Action（現在のレベル・会員種別で解放済みの肩書かをサーバー側でも検証する）
   async function updateTitle(title: string) {
     'use server'
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { count } = await supabase
-      .from('posts')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
+    const [{ data: profile }, { count }] = await Promise.all([
+      supabase.from('profiles').select('plan').eq('id', user.id).single(),
+      supabase.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+    ])
     const currentLevel = getLevel(count ?? 0)
 
-    if (!getAvailableTitles(currentLevel).includes(title)) return
+    if (!getAvailableTitles(currentLevel, profile?.plan === 'paid').includes(title)) return
 
     await supabase.from('profiles').update({ title }).eq('id', user.id)
     revalidatePath('/mypage')
@@ -144,10 +145,12 @@ export default async function MyPage({
         <p className="text-xs text-gray-500 mb-2">
           書き込み時に名前の横に表示されます。レベルが上がるほど選べる肩書が増えます（現在
           {availableTitles.length}個から選択可能）。
+          {!isPaid && '有料会員限定の特別な肩書もあります。'}
         </p>
         <TitlePicker
           currentTitle={profile?.title ?? null}
           availableTitles={availableTitles}
+          paidOnlyTitles={PAID_ONLY_TITLES}
           updateTitle={updateTitle}
         />
       </section>
