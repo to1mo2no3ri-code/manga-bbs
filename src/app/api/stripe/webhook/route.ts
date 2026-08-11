@@ -22,29 +22,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid signature' }, { status: 400 })
   }
 
+  console.log(`[stripe webhook] received event: ${event.type}`)
+
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
     const userId = session.client_reference_id
+    console.log(
+      `[stripe webhook] checkout.session.completed: client_reference_id=${userId}, customer=${session.customer}, payment_status=${session.payment_status}`
+    )
 
-    if (userId) {
-      const supabaseAdmin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
-
-      const { error } = await supabaseAdmin
-        .from('profiles')
-        .update({
-          plan: 'paid',
-          stripe_customer_id: typeof session.customer === 'string' ? session.customer : null,
-        })
-        .eq('id', userId)
-
-      if (error) {
-        console.error('Failed to update profile after payment:', error)
-        return NextResponse.json({ error: 'db update failed' }, { status: 500 })
-      }
+    if (!userId) {
+      console.error('[stripe webhook] checkout.session.completed had no client_reference_id')
+      return NextResponse.json({ received: true, warning: 'no client_reference_id' })
     }
+
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { data, error } = await supabaseAdmin
+      .from('profiles')
+      .update({
+        plan: 'paid',
+        stripe_customer_id: typeof session.customer === 'string' ? session.customer : null,
+      })
+      .eq('id', userId)
+      .select()
+
+    if (error) {
+      console.error('[stripe webhook] failed to update profile after payment:', error)
+      return NextResponse.json({ error: 'db update failed' }, { status: 500 })
+    }
+
+    console.log(`[stripe webhook] profile update affected ${data?.length ?? 0} row(s):`, data)
   }
 
   return NextResponse.json({ received: true })
