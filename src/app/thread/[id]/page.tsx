@@ -6,6 +6,7 @@ import { headers } from 'next/headers'
 import crypto from 'crypto'
 import SubmitButton from '@/components/SubmitButton'
 import RealtimePosts from '@/components/RealtimePosts'
+import FavoriteButton from '@/components/FavoriteButton'
 import { getLevel } from '@/lib/levels'
 
 export const revalidate = 0
@@ -32,14 +33,26 @@ export default async function ThreadDetailPage({
   const { id } = await params
   const supabase = await createClient()
 
-  // スレッド情報とレス一覧を並行取得（表示速度改善）
-  const [{ data: thread }, { data: posts }] = await Promise.all([
+  // スレッド情報とレス一覧、ログイン状態を並行取得（表示速度改善）
+  const [{ data: thread }, { data: posts }, { data: { user } }] = await Promise.all([
     supabase.from('threads').select('*').eq('id', id).single(),
     supabase.from('posts').select('*').eq('thread_id', id).order('created_at', { ascending: true }),
+    supabase.auth.getUser(),
   ])
 
   if (!thread) {
     notFound()
+  }
+
+  let isFavorite = false
+  if (user) {
+    const { data: favorite } = await supabase
+      .from('favorites')
+      .select('thread_id')
+      .eq('user_id', user.id)
+      .eq('thread_id', id)
+      .maybeSingle()
+    isFavorite = !!favorite
   }
 
   // レス投稿用 Server Action（reply_to が指定されていれば返信として紐付ける）
@@ -101,7 +114,12 @@ export default async function ThreadDetailPage({
             {thread.category}
           </span>
         )}
-        <h1 className="text-xl font-bold text-gray-900 mb-2">{thread.title}</h1>
+        <h1 className="text-xl font-bold text-gray-900 mb-2 flex items-baseline gap-1.5">
+          {user && (
+            <FavoriteButton threadId={id} initialIsFavorite={isFavorite} className="text-base" />
+          )}
+          {thread.title}
+        </h1>
         <p className="text-gray-800 whitespace-pre-wrap break-words leading-snug mb-2">
           {thread.body}
         </p>

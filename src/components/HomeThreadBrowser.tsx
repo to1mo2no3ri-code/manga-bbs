@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { MANGA_MAGAZINES } from '@/lib/magazines'
+import FavoriteButton from '@/components/FavoriteButton'
 
 export type ThreadWithStats = {
   id: string
@@ -12,10 +13,12 @@ export type ThreadWithStats = {
   created_at: string
   replyCount: number
   lastReplyAt: string | null
+  isFavorite: boolean
 }
 
 interface HomeThreadBrowserProps {
   threads: ThreadWithStats[]
+  isLoggedIn: boolean
 }
 
 type Tab = 'new' | 'popular' | 'recentReply' | 'search'
@@ -34,7 +37,7 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
 }
 
-export default function HomeThreadBrowser({ threads }: HomeThreadBrowserProps) {
+export default function HomeThreadBrowser({ threads, isLoggedIn }: HomeThreadBrowserProps) {
   const [activeTab, setActiveTab] = useState<Tab>('new')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -208,9 +211,14 @@ export default function HomeThreadBrowser({ threads }: HomeThreadBrowserProps) {
               className="block py-2 hover:bg-gray-50 transition"
             >
               <div className="flex justify-between items-baseline gap-2">
-                <h3 className="text-sm sm:text-base font-bold text-blue-600 truncate">
-                  {thread.title}
-                </h3>
+                <span className="flex items-baseline gap-1 min-w-0">
+                  {isLoggedIn && (
+                    <FavoriteButton threadId={thread.id} initialIsFavorite={thread.isFavorite} />
+                  )}
+                  <h3 className="text-sm sm:text-base font-bold text-blue-600 truncate">
+                    {thread.title}
+                  </h3>
+                </span>
                 <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap shrink-0">
                   {formatDate(thread.created_at)}
                 </span>

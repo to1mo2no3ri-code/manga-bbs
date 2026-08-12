@@ -15,13 +15,14 @@ export default async function HomePage() {
   ])
 
   let username: string | null = null
+  let favoriteThreadIds = new Set<string>()
   if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', user.id)
-      .single()
+    const [{ data: profile }, { data: favorites }] = await Promise.all([
+      supabase.from('profiles').select('username').eq('id', user.id).single(),
+      supabase.from('favorites').select('thread_id').eq('user_id', user.id),
+    ])
     username = profile?.username ?? null
+    favoriteThreadIds = new Set((favorites ?? []).map((f) => f.thread_id))
   }
 
   if (error) {
@@ -47,6 +48,7 @@ export default async function HomePage() {
     created_at: thread.created_at,
     replyCount: statsByThreadId.get(thread.id)?.replyCount ?? 0,
     lastReplyAt: statsByThreadId.get(thread.id)?.lastReplyAt ?? null,
+    isFavorite: favoriteThreadIds.has(thread.id),
   }))
 
   return (
@@ -88,7 +90,7 @@ export default async function HomePage() {
         </div>
       </header>
 
-      <HomeThreadBrowser threads={threadsWithStats} />
+      <HomeThreadBrowser threads={threadsWithStats} isLoggedIn={!!user} />
     </main>
   )
 }

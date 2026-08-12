@@ -6,11 +6,48 @@ import { getLevel, getNextLevelThreshold } from '@/lib/levels'
 import { getAvailableTitles, PAID_ONLY_TITLES } from '@/lib/titles'
 import { LIFETIME_PLAN_PRICE_JPY } from '@/lib/plans'
 import { createCheckoutSession } from '@/app/actions/stripe'
+import { ACHIEVEMENTS, getEarnedAchievementKeys } from '@/lib/achievements'
 import SubmitButton from '@/components/SubmitButton'
 import LogoutButton from '@/components/LogoutButton'
 import TitlePicker from '@/components/TitlePicker'
 
 export const revalidate = 0
+
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
+
+// お気に入り登録したスレッドのタイトル一覧を取得
+async function getFavoriteThreads(supabase: SupabaseClient, userId: string) {
+  const { data: favorites } = await supabase.from('favorites').select('thread_id').eq('user_id', userId)
+  const threadIds = (favorites ?? []).map((f) => f.thread_id)
+  if (threadIds.length === 0) return []
+
+  const { data: threads } = await supabase.from('threads').select('id, title').in('id', threadIds)
+  return threads ?? []
+}
+
+// 自分の投稿に付いた返信を新着順に取得
+async function getRepliesToUser(supabase: SupabaseClient, userId: string, limit = 20) {
+  const { data: myPosts } = await supabase.from('posts').select('id').eq('user_id', userId)
+  const myPostIds = (myPosts ?? []).map((p) => p.id)
+  if (myPostIds.length === 0) return []
+
+  const { data: replies } = await supabase
+    .from('posts')
+    .select('id, thread_id, body, created_at, display_name, user_hash_id')
+    .in('reply_to', myPostIds)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  const rows = replies ?? []
+  const threadIds = [...new Set(rows.map((r) => r.thread_id))]
+  let titleById = new Map<string, string>()
+  if (threadIds.length > 0) {
+    const { data: threads } = await supabase.from('threads').select('id, title').in('id', threadIds)
+    titleById = new Map((threads ?? []).map((t) => [t.id, t.title]))
+  }
+
+  return rows.map((r) => ({ ...r, threadTitle: titleById.get(r.thread_id) ?? 'スレッド' }))
+}
 
 export default async function MyPage({
   searchParams,
@@ -25,10 +62,14 @@ export default async function MyPage({
     redirect('/login')
   }
 
-  const [{ data: profile }, { count: postCount }] = await Promise.all([
-    supabase.from('profiles').select('username, title, plan').eq('id', user.id).single(),
-    supabase.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-  ])
+  const [{ data: profile }, { count: postCount }, earnedAchievementKeys, favoriteThreads, repliesToUser] =
+    await Promise.all([
+      supabase.from('profiles').select('username, title, plan').eq('id', user.id).single(),
+      supabase.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+      getEarnedAchievementKeys(supabase, user.id),
+      getFavoriteThreads(supabase, user.id),
+      getRepliesToUser(supabase, user.id),
+    ])
 
   const totalPosts = postCount ?? 0
   const level = getLevel(totalPosts)
@@ -153,6 +194,76 @@ export default async function MyPage({
           paidOnlyTitles={PAID_ONLY_TITLES}
           updateTitle={updateTitle}
         />
+      </section>
+
+      <section className="mb-6">
+        <h2 className="text-sm font-bold text-gray-700 mb-2">実績</h2>
+        <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {ACHIEVEMENTS.map((achievement) => {
+            const earned = earnedAchievementKeys.has(achievement.key)
+            return (
+              <li
+                key={achievement.key}
+                title={achievement.description}
+                className={`p-2 rounded border text-center ${
+                  earned
+                    ? 'border-amber-300 bg-amber-50 text-amber-700'
+                    : 'border-gray-200 bg-gray-50 text-gray-400'
+                }`}
+              >
+                <div className="text-xs font-bold">{achievement.label}</div>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="text-sm font-bold text-gray-700 mb-2">お気に入りスレ</h2>
+        {favoriteThreads.length > 0 ? (
+          <ul className="divide-y divide-gray-200">
+            {favoriteThreads.map((thread) => (
+              <li key={thread.id}>
+                <Link
+                  href={`/thread/${thread.id}`}
+                  className="block py-1.5 text-sm text-blue-600 hover:underline truncate"
+                >
+                  {thread.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-gray-500">
+            スレッド一覧の☆を押すと、ここに追加されます。
+          </p>
+        )}
+      </section>
+
+      <section>
+        <h2 className="text-sm font-bold text-gray-700 mb-2">自分への返信</h2>
+        {repliesToUser.length > 0 ? (
+          <ul className="divide-y divide-gray-200">
+            {repliesToUser.map((reply) => (
+              <li key={reply.id}>
+                <Link
+                  href={`/thread/${reply.thread_id}#res-${reply.id}`}
+                  className="block py-1.5 hover:bg-gray-50 transition"
+                >
+                  <div className="text-xs text-gray-400 truncate">{reply.threadTitle}</div>
+                  <div className="text-sm text-gray-800 truncate">
+                    <span className="text-blue-600 font-semibold">
+                      {reply.display_name ?? reply.user_hash_id}
+                    </span>{' '}
+                    {reply.body}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-gray-500">まだ返信はありません。</p>
+        )}
       </section>
     </main>
   )
