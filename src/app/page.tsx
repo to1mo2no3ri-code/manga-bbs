@@ -81,12 +81,6 @@ export default async function HomePage() {
               </Link>
             </span>
           )}
-          <Link
-            href="/admin/login"
-            className="text-[10px] sm:text-xs text-gray-500 hover:text-gray-800 underline whitespace-nowrap"
-          >
-            運営ログイン
-          </Link>
         </div>
       </header>
 

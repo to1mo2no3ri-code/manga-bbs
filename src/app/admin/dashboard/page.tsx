@@ -1,13 +1,19 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { isCurrentUserAdmin, requireAdmin } from '@/lib/auth'
 
 export const revalidate = 0
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ adminAdded?: string; adminAddError?: string }>
+}) {
   // ログイン・管理者チェック
   const { supabase } = await requireAdmin()
+  const { adminAdded, adminAddError } = await searchParams
 
   // 全スレッド取得
   const { data: threads } = await supabase
@@ -33,6 +39,29 @@ export default async function AdminDashboardPage() {
     revalidatePath('/')
   }
 
+  // 管理者追加 Action（既存ユーザーをメールアドレス指定でis_admin=trueにする）
+  async function addAdminByEmail(formData: FormData) {
+    'use server'
+    const email = (formData.get('email') as string)?.trim().toLowerCase()
+    if (!email) return
+
+    const supabase = await createClient()
+    if (!(await isCurrentUserAdmin(supabase))) return
+
+    const { data: targetProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle()
+
+    if (!targetProfile) {
+      redirect(`/admin/dashboard?adminAddError=${encodeURIComponent(email)}`)
+    }
+
+    await supabase.from('profiles').update({ is_admin: true }).eq('id', targetProfile.id)
+    redirect(`/admin/dashboard?adminAdded=${encodeURIComponent(email)}`)
+  }
+
   return (
     <main className="max-w-4xl mx-auto p-4 min-h-screen">
       <div className="flex justify-between items-center mb-6 border-b pb-4">
@@ -49,6 +78,39 @@ export default async function AdminDashboardPage() {
           </Link>
         </div>
       </div>
+
+      {adminAdded && (
+        <div className="mb-4 text-sm text-green-700 bg-green-50 p-2 rounded border border-green-200">
+          {adminAdded} を管理者に追加しました。
+        </div>
+      )}
+      {adminAddError && (
+        <div className="mb-4 text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200">
+          {adminAddError} は登録済みユーザーの中に見つかりませんでした。
+        </div>
+      )}
+
+      <section className="mb-6 p-4 bg-white border rounded-lg shadow-sm">
+        <h2 className="text-sm font-bold text-gray-700 mb-2">管理者を追加</h2>
+        <p className="text-xs text-gray-500 mb-2">
+          既に会員登録済みのユーザーのメールアドレスを指定して、管理者権限を付与します。
+        </p>
+        <form action={addAdminByEmail} className="flex gap-2">
+          <input
+            type="email"
+            name="email"
+            required
+            placeholder="admin@example.com"
+            className="flex-1 p-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 text-sm bg-gray-800 text-white font-semibold rounded hover:bg-gray-900 transition"
+          >
+            管理者に追加
+          </button>
+        </form>
+      </section>
 
       <section className="space-y-4">
         <h2 className="text-lg font-bold text-gray-700">スレッド管理・削除</h2>

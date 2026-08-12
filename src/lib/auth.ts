@@ -18,12 +18,12 @@ export async function isCurrentUserAdmin(supabase: SupabaseClient): Promise<bool
   return profile?.is_admin === true
 }
 
-// ページ（Server Component）用。管理者でなければ運営ログインへリダイレクト
+// ページ（Server Component）用。未ログインならログイン画面へ、ログイン済みだが管理者でなければホームへ
 export async function requireAdmin() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    redirect('/admin/login')
+    redirect('/login')
   }
 
   const { data: profile } = await supabase
@@ -33,7 +33,7 @@ export async function requireAdmin() {
     .single()
 
   if (!profile?.is_admin) {
-    redirect('/admin/login')
+    redirect('/')
   }
 
   return { supabase, user }

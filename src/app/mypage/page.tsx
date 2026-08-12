@@ -64,7 +64,7 @@ export default async function MyPage({
 
   const [{ data: profile }, { count: postCount }, earnedAchievementKeys, favoriteThreads, repliesToUser] =
     await Promise.all([
-      supabase.from('profiles').select('username, title, plan').eq('id', user.id).single(),
+      supabase.from('profiles').select('username, title, plan, is_admin').eq('id', user.id).single(),
       supabase.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
       getEarnedAchievementKeys(supabase, user.id),
       getFavoriteThreads(supabase, user.id),
@@ -120,6 +120,17 @@ export default async function MyPage({
       </div>
 
       <h1 className="text-lg font-bold text-gray-800 mb-4">マイページ</h1>
+
+      {profile?.is_admin && (
+        <div className="mb-4">
+          <Link
+            href="/admin/dashboard"
+            className="inline-block px-4 py-2 text-sm bg-gray-800 text-white font-semibold rounded hover:bg-gray-900 transition"
+          >
+            運営管理画面へ
+          </Link>
+        </div>
+      )}
 
       {payment === 'success' && (
         <div className="mb-4 text-sm text-green-700 bg-green-50 p-2 rounded border border-green-200">
